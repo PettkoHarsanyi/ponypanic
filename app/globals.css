@@ -25,7 +25,8 @@ body {
 
 .mainButton {
   border: 0.5vh solid white;
-  padding: 2vh 10vh;
+  width: max-content;
+  padding: 2vh 5vh;
 }
 
 .moveButton {
