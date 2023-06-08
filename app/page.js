@@ -9,6 +9,7 @@ export default function Home() {
   const [map, setMap] = useState();
   const [hero, setHero] = useState();
   const [resource, setResource] = useState();
+  const [coordinateMap, setCoordinateMap] = useState()
 
   // AZ ELSŐ LÉPÉS A JÁTÉKBAN, ELINDÍTJUK A STORY-T
   // MEGKAPJUK A STORYPLAYTHROUGHTOKEN-T
@@ -22,41 +23,88 @@ export default function Home() {
         setHero(response2.data.heroes[0])
         axios.get(BASE_URL + "/play/mapResource", { headers: { "story-playthrough-token": response.data.storyPlaythroughToken } }).then((response3) => {
           setResource(response3.data)
+          setOverallCoordinateMap(response2.data.map, response2.data.heroes[0], response3.data);
         })
       })
     })
   }
 
-  useEffect(() => {
-    console.log("MAP:")
-    console.log(map);
-    console.log("---------")
-  }, [map])
+  const setOverallCoordinateMap = (_map, _hero, _resource) => {
+    if (!_map) _map = map;
+    if (!_hero) _hero = hero;
+    if (!_resource) _resource = resource;
+    let coordMap = [...Array(_map.height)]
+    coordMap = coordMap.map(row => [...Array(_map.width)]);
 
-  useEffect(() => {
-    console.log("HERO:")
-    console.log(hero);
-    console.log("---------")
-  }, [hero])
 
-  useEffect(() => {
-    console.log("RESOURCE:")
-    console.log(resource);
-    console.log("---------")
-    if (resource) {
-      Object.entries(resource.compressedObstacles.coordinateMap).forEach((entry) => console.log(entry));
-    }
+    _map.treasures.forEach(treasure => {if(treasure.collectedByHeroId===null) coordMap[treasure.position.y][treasure.position.x] = "T"});
 
-  }, [resource])
+    Object.entries(_resource.compressedObstacles.coordinateMap).forEach(entry => {
+      entry[1].forEach(y => {
+        coordMap[y][entry[0]] = "O"
+      })
+    })
+
+    coordMap[_hero.position.y][_hero.position.x] = "H"
+
+    coordMap = coordMap.map(row => {
+      return row.map(cell => {
+        if (cell === undefined) {
+          return "-"
+        }
+        return cell;
+      })
+    })
+
+    setCoordinateMap(coordMap)
+  }
+
+  // useEffect(() => {
+  //   console.log("MAP:")
+  //   console.log(map);
+  //   console.log("---------")
+
+  // }, [map])
+
+  // useEffect(() => {
+  //   console.log("HERO:")
+  //   console.log(hero);
+  //   console.log("---------")
+  // }, [hero])
+
+  // useEffect(() => {
+  //   console.log("RESOURCE:")
+  //   console.log(resource);
+  //   console.log("---------")
+
+  // }, [resource])
 
   // MINDEN ALKALOMMAL, AMIKOR GETSTATE() VAN
   // TEHÁT VÁLTOZIK A "MAP", AKKOR MEGNÉZZÜK
   // HOGY NYERTÜNK E. HA IGEN -> ÚJ SZINT
+  // A KOORDINÁTAMAPOT ÖSSZEÁLLÍTJUK A MAP-BÓL
+  // A HEROBÓL, ÉS AZ AKADÁLYOKBÓL
+
+  useEffect(() => {
+    if (map && hero) {
+      setOverallCoordinateMap()
+    }
+  }, [resource])
+
   useEffect(() => {
     if (map && map.status === "WON") {
       nextLevel();
     }
+    if (map && resource && hero) {
+      setOverallCoordinateMap();
+    }
   }, [map])
+
+  useEffect(() => {
+    console.log("coordmap:")
+    console.log(coordinateMap);
+    console.log("---------")
+  }, [coordinateMap])
 
   // API HÍVÁS A KÖVETKEZŐ SZINT LEKÉRÉSÉRE
   const nextLevel = async () => {
@@ -176,16 +224,7 @@ export default function Home() {
           <div>Debugger:</div>
           <table style={{ border: "0.5vh solid white", borderCollapse: "collapse" }}>
             <tbody>
-              {map && [...Array(map.height)].map((tr, index) => {
-                let yIndex = map.height - index - 1;
-                return <tr key={index}>{[...Array(map.width)].map((td, xIndex) => {
-                  return <td key={xIndex} className="w-10 h-10" style={{ verticalAlign: "center", textAlign: "center", border: "0.2vh solid white" }}>
-                    {hero && xIndex == hero.position.x && yIndex == hero.position.y ? "P" : ""}
-                    {map && map.treasures.some((treasure) => treasure.position.x == xIndex && treasure.position.y == yIndex && treasure.collectedByHeroId == null) ? "X" : ""}
-                    {resource && Object.entries(resource.compressedObstacles.coordinateMap).some((entry)=>{return entry[1].some(y=> entry[0] == xIndex && y == yIndex)}) ? "O" : ""}
-                  </td>
-                })}</tr>
-              })}
+              {coordinateMap && coordinateMap.map((row, index1) => {return <tr key={index1}>{row.map((cell, index2) => { return <td key={index2} className="w-10 h-10" style={{ verticalAlign: "center", textAlign: "center", border: "0.2vh solid white" }}>{coordinateMap[coordinateMap.length-index1-1][index2]}</td> })}</tr>})}
             </tbody>
           </table>
         </div>
