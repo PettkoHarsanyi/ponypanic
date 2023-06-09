@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { Graph, astar } from "javascript-astar"
 
 export default function Home() {
   const BASE_URL = "https://ponypanic.io/playGameApi/v1";
@@ -29,6 +30,59 @@ export default function Home() {
     })
   }
 
+  const makeTick = () => {
+    console.log("INDUL A TICK, ITT VANNAK AZ ADATOK AMIKET KAPTAM")
+    console.log(coordinateMap);
+
+    let obstacleMap = [...coordinateMap.map(y => y.map(x => x == "O" ? 0 : 1))]
+    console.log(obstacleMap);
+
+    // let graph = new Graph(obstacleMap)
+
+    // console.log(graph);
+
+    console.log("HERO: " + hero.position.x + "-" + hero.position.y)
+    console.log("TREASURE: " + map.treasures[0].position.x + "-" + map.treasures[0].position.y)
+
+    // let start = graph.grid[hero.position.x][hero.position.y];
+    // console.log("START: " + start)
+    // let end = graph.grid[map.treasures[0].position.x][map.treasures[0].position.y];
+    // console.log("START: " + end)
+    // let result = astar.search(graph, start, end);
+
+
+    let graph = new Graph(obstacleMap)
+
+    console.log(graph);
+
+    let start = graph.grid[hero.position.y][hero.position.x];
+
+    let end = graph.grid[map.treasures[0].position.y][map.treasures[0].position.x];
+    // console.log(start);
+    // console.log(end);
+
+    var result = astar.search(graph, start, end);
+
+    console.log(result);
+
+    // var graph = new Graph([
+    //   [1, 1, 1, 1],
+    //   [0, 1, 1, 0],
+    //   [0, 0, 1, 1]
+    // ]);
+    // var start = graph.grid[0][0];
+    // var end = graph.grid[1][2];
+    // var result = astar.search(graph, start, end);
+
+    // console.log([
+    //   [1, 1, 1, 1],
+    //   [0, 1, 1, 0],
+    //   [0, 0, 1, 1]
+    // ])
+    // console.log(graph);
+    // console.log(result);
+  }
+
   const setOverallCoordinateMap = (_map, _hero, _resource) => {
     if (!_map) _map = map;
     if (!_hero) _hero = hero;
@@ -37,7 +91,7 @@ export default function Home() {
     coordMap = coordMap.map(row => [...Array(_map.width)]);
 
 
-    _map.treasures.forEach(treasure => {if(treasure.collectedByHeroId===null) coordMap[treasure.position.y][treasure.position.x] = "T"});
+    _map.treasures.forEach(treasure => { if (treasure.collectedByHeroId === null) coordMap[treasure.position.y][treasure.position.x] = "T" });
 
     Object.entries(_resource.compressedObstacles.coordinateMap).forEach(entry => {
       entry[1].forEach(y => {
@@ -79,49 +133,41 @@ export default function Home() {
 
   // }, [resource])
 
-  // MINDEN ALKALOMMAL, AMIKOR GETSTATE() VAN
-  // TEHÁT VÁLTOZIK A "MAP", AKKOR MEGNÉZZÜK
-  // HOGY NYERTÜNK E. HA IGEN -> ÚJ SZINT
-  // A KOORDINÁTAMAPOT ÖSSZEÁLLÍTJUK A MAP-BÓL
-  // A HEROBÓL, ÉS AZ AKADÁLYOKBÓL
+  // useEffect(() => {
+  //   console.log("coordmap:")
+  //   console.log(coordinateMap);
+  //   console.log("---------")
+  // }, [coordinateMap])
 
   useEffect(() => {
-    if (map && hero) {
-      setOverallCoordinateMap()
+    if (coordinateMap && coordinateMap !== undefined && map && map.status == "CREATED") {
+      makeTick();
     }
-  }, [resource])
+  }, [map, coordinateMap])
 
   useEffect(() => {
     if (map && map.status === "WON") {
       nextLevel();
     }
-    if (map && resource && hero) {
-      setOverallCoordinateMap();
-    }
   }, [map])
-
-  useEffect(() => {
-    console.log("coordmap:")
-    console.log(coordinateMap);
-    console.log("---------")
-  }, [coordinateMap])
 
   // API HÍVÁS A KÖVETKEZŐ SZINT LEKÉRÉSÉRE
   const nextLevel = async () => {
     await axios.post(BASE_URL + "/story/nextLevel", {}, { headers: { "story-playthrough-token": storyToken } }).then((response) => {
-      getState();
-      console.log("CURRENT LEVEL: " + response.data.playthroughState.currentLevel)
       axios.get(BASE_URL + "/play/mapResource", { headers: { "story-playthrough-token": storyToken } }).then((response3) => {
         setResource(response3.data)
+        getState(response3.data);
       })
     })
   }
 
   // API HÍVÁS A PÁLYA ÁLLAPOTÁNAK LEKÉRÉSÉRE
-  const getState = async () => {
+  const getState = async (_resource) => {
     await axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": storyToken } }).then((response) => {
       setMap(response.data.map);
       setHero(response.data.heroes[0])
+      if (!_resource) _resource = resource;
+      setOverallCoordinateMap(response.data.map, response.data.heroes[0], _resource)
     })
   }
 
@@ -224,7 +270,7 @@ export default function Home() {
           <div>Debugger:</div>
           <table style={{ border: "0.5vh solid white", borderCollapse: "collapse" }}>
             <tbody>
-              {coordinateMap && coordinateMap.map((row, index1) => {return <tr key={index1}>{row.map((cell, index2) => { return <td key={index2} className="w-10 h-10" style={{ verticalAlign: "center", textAlign: "center", border: "0.2vh solid white" }}>{coordinateMap[coordinateMap.length-index1-1][index2]}</td> })}</tr>})}
+              {coordinateMap && coordinateMap.map((row, index1) => { return <tr key={index1}>{row.map((cell, index2) => { return <td key={index2} className="w-10 h-10" style={{ verticalAlign: "center", textAlign: "center", border: "0.2vh solid white" }}>{coordinateMap[coordinateMap.length - index1 - 1][index2]}</td> })}</tr> })}
             </tbody>
           </table>
         </div>
