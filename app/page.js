@@ -12,94 +12,110 @@ export default function Home() {
   const [resource, setResource] = useState();
   const [coordinateMap, setCoordinateMap] = useState()
 
-  // AZ ELSŐ LÉPÉS A JÁTÉKBAN, ELINDÍTJUK A STORY-T
-  // MEGKAPJUK A STORYPLAYTHROUGHTOKEN-T
-  // LEKÉRJÜK A PÁLYÁT,
-  // ÉS BEÁLLÍTJUK AZT A JÁTÉKOSSAL EGYÜTT
+
   const startStory = async () => {
     await axios.post(BASE_URL + "/story/begin", {}, { headers: { "player-token": "954_I1VGS0h9Ln4sSiNfQlJUeUd+O1ZzcWcsfCFpQkVKblgyPD5Yc1hrY0Q=" } }).then((response) => {
       setStoryToken(response.data.storyPlaythroughToken)
-      axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": response.data.storyPlaythroughToken } }).then((response2) => {
-        setMap(response2.data.map);
-        setHero(response2.data.heroes[0])
-        axios.get(BASE_URL + "/play/mapResource", { headers: { "story-playthrough-token": response.data.storyPlaythroughToken } }).then((response3) => {
-          setResource(response3.data)
-          setOverallCoordinateMap(response2.data.map, response2.data.heroes[0], response3.data);
-        })
+    })
+  }
+
+  // AMIKOR A STORYTOKEN VÁLTOZIK (ÚJ JÁTÉK INDÍTÁSÁNÁL)
+  useEffect(() => {
+    if (storyToken !== "") {
+      startLevel();
+    }
+  }, [storyToken])
+
+  useEffect(() => {
+    if (map && map.status === "CREATED") {
+      setOverallCoordinateMap(map, hero, resource);
+    }
+  }, [resource])
+
+  const startLevel = async () => {
+    console.log("startlevel")
+    axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": storyToken } }).then((response2) => {
+      setMap(response2.data.map);
+      setHero(response2.data.heroes[0])
+      axios.get(BASE_URL + "/play/mapResource", { headers: { "story-playthrough-token": storyToken } }).then((response3) => {
+        setResource(response3.data)
       })
     })
   }
 
-  const makeTick = () => {
-    console.log("INDUL A TICK, ITT VANNAK AZ ADATOK AMIKET KAPTAM")
-    console.log(coordinateMap);
+  // const move = async () => {
+  // console.log("INDUL A TICK, ITT VANNAK AZ ADATOK AMIKET KAPTAM")
+  // console.log(coordinateMap);
 
-    let obstacleMap = [...coordinateMap.map(y => y.map(x => x == "O" ? 0 : 1))]
-    console.log(obstacleMap);
+  // let obstacleMap = [...coordinateMap.map(y => y.map(x => x == "O" ? 0 : 1))]
+  // console.log(obstacleMap);
 
-    // let graph = new Graph(obstacleMap)
+  // let graph = new Graph(obstacleMap)
+  // let start = graph.grid[hero.position.y][hero.position.x];
+  // let end = graph.grid[map.treasures[0].position.y][map.treasures[0].position.x];
 
-    // console.log(graph);
+  // var result = astar.search(graph, start, end);
 
-    console.log("HERO: " + hero.position.x + "-" + hero.position.y)
-    console.log("TREASURE: " + map.treasures[0].position.x + "-" + map.treasures[0].position.y)
+  // console.log("HERO: x: " + hero.position.y + " y: " + hero.position.x)
+  // console.log("KÖVI LEPES: x: " + result[0].x + " y: " + result[0].y)
 
-    // let start = graph.grid[hero.position.x][hero.position.y];
-    // console.log("START: " + start)
-    // let end = graph.grid[map.treasures[0].position.x][map.treasures[0].position.y];
-    // console.log("START: " + end)
-    // let result = astar.search(graph, start, end);
+  // result.forEach( async (node) => {
+  //   console.log(node);
+  //   if (node.x == hero.position.y && node.y > hero.position.x) {
+  //     await moveRight();
+  //   }
+  //   if (node.x == hero.position.y && node.y < hero.position.x) {
+  //     await moveLeft();
+  //   }
+  //   if (node.x < hero.position.y && node.y == hero.position.x) {
+  //     await moveDown();
+  //   }
+  //   if (node.x > hero.position.y && node.y == hero.position.x) {
+  //     await moveUp();
+  //   }
+  // })
 
-
-    let graph = new Graph(obstacleMap)
-
-    console.log(graph);
-
-    let start = graph.grid[hero.position.y][hero.position.x];
-
-    let end = graph.grid[map.treasures[0].position.y][map.treasures[0].position.x];
-    // console.log(start);
-    // console.log(end);
-
-    var result = astar.search(graph, start, end);
-
-    console.log(result);
-
-    // var graph = new Graph([
-    //   [1, 1, 1, 1],
-    //   [0, 1, 1, 0],
-    //   [0, 0, 1, 1]
-    // ]);
-    // var start = graph.grid[0][0];
-    // var end = graph.grid[1][2];
-    // var result = astar.search(graph, start, end);
-
-    // console.log([
-    //   [1, 1, 1, 1],
-    //   [0, 1, 1, 0],
-    //   [0, 0, 1, 1]
-    // ])
-    // console.log(graph);
-    // console.log(result);
-  }
-
-  const setOverallCoordinateMap = (_map, _hero, _resource) => {
-    if (!_map) _map = map;
-    if (!_hero) _hero = hero;
-    if (!_resource) _resource = resource;
-    let coordMap = [...Array(_map.height)]
-    coordMap = coordMap.map(row => [...Array(_map.width)]);
+  // console.log(start);
+  // console.log(end);
 
 
-    _map.treasures.forEach(treasure => { if (treasure.collectedByHeroId === null) coordMap[treasure.position.y][treasure.position.x] = "T" });
+  // console.log(result);
 
-    Object.entries(_resource.compressedObstacles.coordinateMap).forEach(entry => {
+  // var graph = new Graph([
+  //   [1, 1, 1, 1],
+  //   [0, 1, 1, 0],
+  //   [0, 0, 1, 1]
+  // ]);
+  // var start = graph.grid[0][0];
+  // var end = graph.grid[1][2];
+  // var result = astar.search(graph, start, end);
+
+  // console.log([
+  //   [1, 1, 1, 1],
+  //   [0, 1, 1, 0],
+  //   [0, 0, 1, 1]
+  // ])
+  // console.log(graph);
+  // console.log(result);
+  // }
+
+  const setOverallCoordinateMap = () => {
+    // if (!_map) _map = map;
+    // if (!_hero) _hero = hero;
+    // if (!_resource) _resource = resource;
+    let coordMap = [...Array(map.height)]
+    coordMap = coordMap.map(row => [...Array(map.width)]);
+
+
+    map.treasures.forEach(treasure => { if (treasure.collectedByHeroId === null) coordMap[treasure.position.y][treasure.position.x] = "T" });
+
+    Object.entries(resource.compressedObstacles.coordinateMap).forEach(entry => {
       entry[1].forEach(y => {
         coordMap[y][entry[0]] = "O"
       })
     })
 
-    coordMap[_hero.position.y][_hero.position.x] = "H"
+    coordMap[hero.position.y][hero.position.x] = "H"
 
     coordMap = coordMap.map(row => {
       return row.map(cell => {
@@ -139,35 +155,55 @@ export default function Home() {
   //   console.log("---------")
   // }, [coordinateMap])
 
-  useEffect(() => {
-    if (coordinateMap && coordinateMap !== undefined && map && map.status == "CREATED") {
-      makeTick();
-    }
-  }, [map, coordinateMap])
+  // useEffect(() => {
+  //   if (coordinateMap && coordinateMap !== undefined && map && map.status == "CREATED") {
+  //     move();
+  //   }
+  // }, [map, coordinateMap])
 
-  useEffect(() => {
-    if (map && map.status === "WON") {
-      nextLevel();
-    }
-  }, [map])
+  // useEffect(() => {
+  //   if (map && map.status === "WON") {
+  //     nextLevel();
+  //   }
+  // }, [map])
+
+  // const [dataReady, setDataReady] = useState(false);
+
+  // useEffect(() => {
+  //   if (hero !== undefined && map !== undefined && resource !== undefined) {
+
+  //   }
+  // }, [resource])
 
   // API HÍVÁS A KÖVETKEZŐ SZINT LEKÉRÉSÉRE
   const nextLevel = async () => {
-    await axios.post(BASE_URL + "/story/nextLevel", {}, { headers: { "story-playthrough-token": storyToken } }).then((response) => {
-      axios.get(BASE_URL + "/play/mapResource", { headers: { "story-playthrough-token": storyToken } }).then((response3) => {
-        setResource(response3.data)
-        getState(response3.data);
-      })
+    await axios.post(BASE_URL + "/story/nextLevel", {}, { headers: { "story-playthrough-token": storyToken } }).then(async (response) => {
+      startLevel();
     })
   }
 
+  useEffect(()=>{
+    if(map && map.status === "WON"){
+      nextLevel();
+    }
+  },[map])
+
+
+  const [dataReady,setDataReady] = useState(false);
+
+  useEffect(()=>{
+    if(dataReady){
+      setDataReady(false);
+      setOverallCoordinateMap(hero,map,resource);
+    }
+  },[dataReady])
+
   // API HÍVÁS A PÁLYA ÁLLAPOTÁNAK LEKÉRÉSÉRE
-  const getState = async (_resource) => {
-    await axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": storyToken } }).then((response) => {
+  const getState = async () => {
+    await axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": storyToken } }).then(async (response) => {
       setMap(response.data.map);
       setHero(response.data.heroes[0])
-      if (!_resource) _resource = resource;
-      setOverallCoordinateMap(response.data.map, response.data.heroes[0], _resource)
+      setDataReady(true);
     })
   }
 
@@ -187,9 +223,9 @@ export default function Home() {
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_LEFT"
-    }, { headers: { "story-playthrough-token": storyToken } }).then(() => {
+    }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET BALRA")
-      getState()
+      await getState()
     })
   }
 
@@ -198,9 +234,9 @@ export default function Home() {
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_RIGHT"
-    }, { headers: { "story-playthrough-token": storyToken } }).then(() => {
+    }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET JOBBRA")
-      getState();
+      await getState();
     })
   }
 
@@ -209,9 +245,9 @@ export default function Home() {
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_UP"
-    }, { headers: { "story-playthrough-token": storyToken } }).then(() => {
+    }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET FEL")
-      getState();
+      await getState();
     })
   }
 
@@ -220,9 +256,9 @@ export default function Home() {
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_DOWN"
-    }, { headers: { "story-playthrough-token": storyToken } }).then(() => {
+    }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET LE")
-      getState();
+      await getState();
     })
   }
 
