@@ -54,19 +54,41 @@ body {
   background: linear-gradient(180deg, rgb(47, 47, 47) 0%, rgba(0, 0, 0, 1) 100%);
 }
 
+
+.attackButton {
+  background-color: black;
+}
+
+.attackButton:hover {
+  background: linear-gradient(180deg, rgb(47, 47, 47) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
+.attackButton:active {
+  background: linear-gradient(180deg, rgb(77, 77, 77) 0%, rgba(0, 0, 0, 1) 100%);
+
+}
+
+.attackSelected {
+  background: linear-gradient(180deg, rgb(77, 77, 77) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
+.attackSelected:hover {
+  background: linear-gradient(180deg, rgb(77, 77, 77) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
 .mBdown:hover {
   background: linear-gradient(0deg, rgb(47, 47, 47) 0%, rgba(0, 0, 0, 1) 100%);
 }
 
-.mBup{
+.mBup {
   box-shadow: 0vh 0vh 0.5vh 0.5vh rgb(47, 47, 47);
 }
 
-.mBleft{
+.mBleft {
   box-shadow: 0.5vh -0.5vh 0.5vh 0.5vh rgb(47, 47, 47);
 }
 
-.mBright{
+.mBright {
   box-shadow: -0.5vh -0.5vh 0.5vh 0.5vh rgb(47, 47, 47);
 }
 
@@ -77,4 +99,26 @@ table {
   left: 0;
   right: 0;
   height: 100%;
+}
+
+.animateCircle {
+  animation: animateCircle infinite 2s;
+  border: 0.1vh solid red !important;
+}
+
+@keyframes animateCircle {
+  0% {
+    width: 50%;
+    height: 50%;
+  }
+
+  50% {
+    width: 65%;
+    height: 65%;
+  }
+
+  100% {
+    width: 50%;
+    height: 50%;
+  }
 }
