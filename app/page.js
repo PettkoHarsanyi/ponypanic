@@ -60,7 +60,7 @@ export default function Home() {
     coordMap = coordMap.map(row => {
       return row.map(cell => {
         if (cell === undefined) {
-          return "-"
+          return "."
         }
         return cell;
       })
@@ -81,15 +81,38 @@ export default function Home() {
     let obstacleMap = [...coordinateMap.map(y => y.map(x => x == "O" ? 0 : 1))]
     let graph = new Graph(obstacleMap)
     let start = graph.grid[hero.position.y][hero.position.x];
-    let end = graph.grid[map.treasures[0].position.y][map.treasures[0].position.x];
-    var result = astar.search(graph, start, end);
 
-    console.log(start);
-    console.log(result);
+
+    let ends = map.treasures.map(treasure => graph.grid[treasure.position.y][treasure.position.x])
+    let results = ends.map((end) => astar.search(graph, start, end))
+
+    results = results.sort((a, b) => a.length - b.length)
+
+    console.log(results);
+
+    let paths = results.map((result, index) => {
+      if (index === 0) {
+        return result;
+      } else {
+        let nextStart = graph.grid[results[index - 1][results[index - 1].length - 1].x][results[index - 1][results[index - 1].length - 1].y];
+        let nextEnd = graph.grid[result[result.length - 1].x][result[result.length - 1].y]
+        console.log(nextStart);
+        console.log(nextEnd);
+        return astar.search(graph, nextStart, nextEnd)
+      }
+    })
+
+    console.log(paths);
+    
+    let flatPaths = []
+
+    paths.forEach(path=>flatPaths = flatPaths.concat(path))
+
+
 
     let heroPos = { x: hero.position.y, y: hero.position.x }
     const interval = setInterval(() => {
-      const nextStep = result.shift();
+      const nextStep = flatPaths.shift();
 
       if (heroPos.x === nextStep.x && heroPos.y < nextStep.y) moveRight();
       if (heroPos.x === nextStep.x && nextStep.y < heroPos.y) moveLeft();
@@ -99,7 +122,7 @@ export default function Home() {
       heroPos.x = nextStep.x;
       heroPos.y = nextStep.y;
 
-      if (result.length === 0) {
+      if (flatPaths.length === 0) {
         clearInterval(interval);
       }
     }, 1000)
@@ -246,7 +269,7 @@ export default function Home() {
       <div className="w-full lg:w-1/2 h-max lg:h-screen flex flex-row justify-center items-center" >
         <div className="flex flex-col py-10 px-8 gap-5" style={{ border: "0.6vh solid white", width: "55%", aspectRatio: "0.62", borderRadius: "3vh 3vh 7vh 7vh" }}>
           <div className="flex flex-col justify-center items-center" style={{ border: "0.5vh solid white", height: "50%", borderRadius: "1vh 1vh 4vh 4vh" }}>
-            <div className="aspect-square relative" style={{ border: "0.4vh solid white", width: "60%", borderRadius: "1vh" }}>
+            <div className="aspect-square relative" style={{ border: "0.4vh solid white", width: "60%", borderRadius: "1vh", boxShadow: "inset 0 0 2vh 0.5vh gray" }}>
               {storyToken &&
                 <table style={{ borderCollapse: "collapse", width: "100%" }}>
                   <tbody>
@@ -262,27 +285,27 @@ export default function Home() {
             <div className="flex flex-row w-full">
               <div className="w-1/2">
                 <div className="aspect-square relative left-[15%] grid grid-cols-3" style={{ width: "60%" }}>
-                  <div className="col-start-2 moveButton mBup" style={{ border: "solid white", borderWidth: "0.3vh 0.3vh 0 0.3vh", borderRadius: "0.5vh 0.5vh 0 0" }} onClick={() => coordinateMap ? moveUp() : null}><BiUpArrow /></div>
+                  <div className="col-start-2 moveButton mBup" style={{ border: "solid white", borderWidth: "0.3vh 0.3vh 0 0.3vh", borderRadius: "0.5vh 0.5vh 0 0", zIndex: 52 }} onClick={() => coordinateMap ? moveUp() : null}><BiUpArrow /></div>
                   <div></div>
                   <div className="moveButton mBleft" style={{ border: "solid white", borderWidth: "0.3vh 0 0.3vh 0.3vh", borderRadius: "0.5vh 0 0 0.5vh" }} onClick={() => coordinateMap ? moveLeft() : null}><BiLeftArrow /></div>
-                  <div className="flex flex-col justify-center items-center">o</div>
+                  <div className="flex flex-col justify-center items-center" style={{ overflow: "hidden", backgroundColor: "black", zIndex: 100 }}>o</div>
                   <div className="moveButton mBright" style={{ border: "solid white", borderWidth: "0.3vh 0.3vh 0.3vh 0", borderRadius: " 0 0.5vh 0.5vh 0" }} onClick={() => coordinateMap ? moveRight() : null}><BiRightArrow /></div>
                   <div className="col-start-2 moveButton mBdown" style={{ border: "solid white", borderWidth: "0 0.3vh 0.3vh 0.3vh", borderRadius: "0 0 0.5vh 0.5vh" }} onClick={() => coordinateMap ? moveDown() : null}><BiDownArrow /></div>
                 </div>
               </div>
               <div className="w-1/2 flex flex-row justify-end items-center gap-2 lg:gap-5 pr-[5%]">
                 <div className="flex flex-col justify-center w-min relative top-3">
-                  <div className="aspect-square rounded-full moveButton w-full" style={{ border: "0.2vh solid white" }} ></div>
+                  <div className="aspect-square rounded-full mBup w-full" style={{ border: "0.2vh solid white" }} ></div>
                   <div className="text-[0.5rem] sm:text-sm lg:text-xs xl:text-base" onClick={() => shield()}>SHIELD</div>
                 </div>
                 <div className="flex flex-col justify-center w-min relative bottom-3">
-                  <div className="aspect-square rounded-full moveButton w-full" style={{ border: "0.2vh solid white" }} ></div>
+                  <div className="aspect-square rounded-full mBup w-full" style={{ border: "0.2vh solid white" }} ></div>
                   <div className="text-[0.5rem] sm:text-sm lg:text-xs xl:text-base">ATTACK</div>
                 </div>
               </div>
             </div>
             <div className="px-4 text-xl mt-10 flex flex-col justify-center items-center cursor-pointer" onClick={() => startStory()}>
-              <div style={{ width: "4vh", height: "1vh", border: "0.1vh solid white", borderRadius: "10vh", }}></div>
+              <div style={{ width: "6vh", height: "2vh", border: "0.1vh solid white", borderRadius: "10vh", }}></div>
               <div className="font-extrabold px-4 text-sm">START</div>
 
             </div>
@@ -291,9 +314,9 @@ export default function Home() {
       </div>
       <div className="w-full lg:w-1/2 h-max lg:h-screen">
         <div className="text-4xl lg:text-5xl xl:text-6xl m-20 font-bold">DEBUGGER (IN BIG):</div>
-        <div className="aspect-square m-20 max-h-[70%] relative overflow-hidden text-6xl" style={{ border: "0.5vh solid white", borderRadius: "3vh 3vh 3vh 3vh " }}>
+        <div className="aspect-square m-20 max-h-[70%] relative overflow-hidden text-6xl" style={{ border: "0.5vh solid white", borderRadius: "3vh 3vh 3vh 3vh ", boxShadow: "inset 0 0 2vh 0.5vh gray" }}>
           {storyToken &&
-            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", }}>
               <tbody>
                 {coordinateMap && coordinateMap.map((row, index1) => { return <tr key={index1}>{row.map((cell, index2) => { return <td key={index2} style={{ verticalAlign: "center", textAlign: "center", border: "0.2vh solid white" }}>{coordinateMap[coordinateMap.length - index1 - 1][index2]}</td> })}</tr> })}
               </tbody>

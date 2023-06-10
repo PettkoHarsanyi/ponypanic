@@ -34,6 +34,8 @@ body {
   align-items: center;
   cursor: pointer;
   transition: 0.5s;
+  overflow: hidden;
+  background-color: black;
 }
 
 .moveButton:hover {
@@ -54,6 +56,18 @@ body {
 
 .mBdown:hover {
   background: linear-gradient(0deg, rgb(47, 47, 47) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
+.mBup{
+  box-shadow: 0vh 0vh 0.5vh 0.5vh rgb(47, 47, 47);
+}
+
+.mBleft{
+  box-shadow: 0.5vh -0.5vh 0.5vh 0.5vh rgb(47, 47, 47);
+}
+
+.mBright{
+  box-shadow: -0.5vh -0.5vh 0.5vh 0.5vh rgb(47, 47, 47);
 }
 
 table {
