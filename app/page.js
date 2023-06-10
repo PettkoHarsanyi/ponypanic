@@ -73,15 +73,13 @@ export default function Home() {
 
   useEffect(() => {
     if (coordinateMap !== undefined && map.status == "CREATED") {
-      console.log("MEHET A REKURZIÓ, MINDEN KÉSZEN ÁLL:")
-      console.log(coordinateMap);
       move();
     }
   }, [coordinateMap])
 
   const [autoPlay, setAutoPlay] = useState(false);
 
-  const move = () => {
+  const move = async () => {
     if (!autoPlay) return;
     let obstacleMap = [...coordinateMap.map(y => y.map(x => x == "O" ? 0 : 1))]
     let graph = new Graph(obstacleMap)
@@ -93,7 +91,6 @@ export default function Home() {
 
     results = results.sort((a, b) => a.length - b.length)
 
-    console.log(results);
 
     let paths = results.map((result, index) => {
       if (index === 0) {
@@ -101,13 +98,10 @@ export default function Home() {
       } else {
         let nextStart = graph.grid[results[index - 1][results[index - 1].length - 1].x][results[index - 1][results[index - 1].length - 1].y];
         let nextEnd = graph.grid[result[result.length - 1].x][result[result.length - 1].y]
-        console.log(nextStart);
-        console.log(nextEnd);
         return astar.search(graph, nextStart, nextEnd)
       }
     })
 
-    console.log(paths);
 
     let flatPaths = []
 
@@ -116,21 +110,92 @@ export default function Home() {
 
 
     let heroPos = { x: hero.position.y, y: hero.position.x }
-    const interval = setInterval(() => {
-      const nextStep = flatPaths.shift();
+    let _map = map;
+    const interval = setInterval(async () => {
 
-      if (heroPos.x === nextStep.x && heroPos.y < nextStep.y) moveRight();
-      if (heroPos.x === nextStep.x && nextStep.y < heroPos.y) moveLeft();
-      if (heroPos.y === nextStep.y && heroPos.x < nextStep.x) moveUp();
-      if (heroPos.y === nextStep.y && nextStep.x < heroPos.x) moveDown();
+      // FONTOS: ENEMY CHECKNÉL A MAP ENEMIES TÖMBÖT NÉZZÜK, NE A COORDINATEMAP-OT, MERT ENEMY ÉS BULLET FEDHETIK EGYMÁST
 
-      heroPos.x = nextStep.x;
-      heroPos.y = nextStep.y;
+      let shouldMove = true;
+
+
+
+      if (_map.bullets.some((bullet) => distance(heroPos, bullet.position) == 2 || distance(heroPos, bullet.position) == 1)) {
+        if (_map.bullets.some((bullet) => distance(heroPos, bullet.position) == 2) && _map.enemies.some((enemy) => { let distanceFromEnemy = distance(heroPos, enemy.position); return enemy.health > 0 && (distanceFromEnemy == 2 || distanceFromEnemy == 1) })) {
+          let enemyToHit = _map.enemies.find(enemy => distance(heroPos, enemy.position) == 2 || distance(heroPos, enemy.position) == 1)
+          if (enemyToHit.position.x == heroPos.x && enemyToHit.position.y < heroPos.y) {
+            let resp = await attackLeft()
+            _map = resp.map;
+          };
+          if (enemyToHit.position.x == heroPos.x && heroPos.y < enemyToHit.position.y) {
+            let resp = attackRight()
+            _map = resp.map;
+          };
+          if (enemyToHit.position.y == heroPos.y && heroPos.x < enemyToHit.position.x) {
+            let resp = attackDown()
+            _map = resp.map;
+          };
+          if (enemyToHit.position.y == heroPos.y && heroPos.x > enemyToHit.position.x) {
+            let resp = attackUp()
+            _map = resp.map;
+          };
+          shouldMove = false;
+        } else if (_map.bullets.some((bullet) => distance(heroPos, bullet.position) == 2 || distance(heroPos, bullet.position) == 1)) {
+          let resp = await shield();
+          _map = resp.map;
+          shouldMove = false;
+        }
+      } else if (_map.enemies.some((enemy) => { let distanceFromEnemy = distance(heroPos, enemy.position); return enemy.health > 0 && (distanceFromEnemy == 2 || distanceFromEnemy == 1) })) {
+        let enemyToHit = map.enemies.find(enemy => distance(heroPos, enemy.position) == 2 || distance(heroPos, enemy.position) == 1)
+        if (enemyToHit.position.x == heroPos.x && enemyToHit.position.y < heroPos.y) {
+          let resp = await attackLeft()
+          _map = resp.map;
+        };
+        if (enemyToHit.position.x == heroPos.x && heroPos.y < enemyToHit.position.y) {
+          let resp = await attackRight()
+          _map = resp.map;
+        };
+        if (enemyToHit.position.y == heroPos.y && heroPos.x < enemyToHit.position.x) {
+          let resp = await attackDown()
+          _map = resp.map;
+        };
+        if (enemyToHit.position.y == heroPos.y && heroPos.x > enemyToHit.position.x) {
+          let resp = await attackUp()
+          _map = resp.map;
+        };
+        shouldMove = false;
+      }
+
+      if (shouldMove) {
+        const nextStep = flatPaths.shift();
+        if (heroPos.x === nextStep.x && heroPos.y < nextStep.y) {
+          let resp = await moveRight();
+          _map = resp.map;
+        }
+        if (heroPos.x === nextStep.x && nextStep.y < heroPos.y) {
+          let resp = await moveLeft();
+          _map = resp.map;
+        }
+        if (heroPos.y === nextStep.y && heroPos.x < nextStep.x) {
+          let resp = await moveUp();
+          _map = resp.map;
+        }
+        if (heroPos.y === nextStep.y && nextStep.x < heroPos.x) {
+          let resp = await moveDown();
+          _map = resp.map;
+        }
+        heroPos.x = nextStep.x;
+        heroPos.y = nextStep.y;
+      }
+
 
       if (flatPaths.length === 0) {
         clearInterval(interval);
       }
     }, 1000)
+  }
+
+  const distance = (pos1, pos2) => {
+    return Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2))
   }
 
   // API HÍVÁS A KÖVETKEZŐ SZINT LEKÉRÉSÉRE
@@ -158,80 +223,96 @@ export default function Home() {
 
   // API HÍVÁS A PÁLYA ÁLLAPOTÁNAK LEKÉRÉSÉRE
   const getState = async () => {
-    await axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": storyToken } }).then(async (response) => {
+    let resp;
+    await axios.get(BASE_URL + "/play/mapState", { headers: { "story-playthrough-token": storyToken } }).then((response) => {
       setMap(response.data.map);
       setHero(response.data.heroes[0])
       setDataReady(true);
+      resp = response.data
     })
+    return resp;
   }
 
   // API HÍVÁS PAJZSRA
   const shield = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": hero.id,
       "action": "USE_SHIELD",
-    }, { headers: { "story-playthrough-token": storyToken } }).then(() => {
+    }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("PAJZSOT HASZNÁLTAM")
-      getState()
+      resp = await getState()
     })
+    return resp;
   }
 
   // API HÍVÁS A BALRA MOZGÁSRA
   const moveLeft = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_LEFT"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET BALRA")
-      await getState()
+      resp = await getState();
     })
+    return resp
   }
 
   // API HÍVÁS A JOBBRA MOZGÁSRA
   const moveRight = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_RIGHT"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET JOBBRA")
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   // API HÍVÁS A FEL MOZGÁSRA
   const moveUp = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_UP"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET FEL")
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   // API HÍVÁS A LE MOZGÁSRA
   const moveDown = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "MOVE_DOWN"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("LÉPTEM EGYET LE")
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   const attackUp = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "KICK_DOWN"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("ÜTÖTTEM EGYET FEL")
       setIsNextAttack(false)
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   const attackDown = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       // HIBALEHETŐSÉG, VAGY KICK_DOWN
@@ -239,30 +320,35 @@ export default function Home() {
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("ÜTÖTTEM EGYET LE")
       setIsNextAttack(false)
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   const attackLeft = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "KICK_LEFT"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("ÜTÖTTEM EGYET BALRA")
       setIsNextAttack(false)
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   const attackRight = async () => {
+    let resp;
     await axios.post(BASE_URL + "/play/approveHeroTurn", {
       "heroId": null,
       "action": "KICK_RIGHT"
     }, { headers: { "story-playthrough-token": storyToken } }).then(async () => {
       console.log("ÜTÖTTEM EGYET JOBBRA")
       setIsNextAttack(false)
-      await getState();
+      resp = await getState();
     })
+    return resp;
   }
 
   const [isNextAttack, setIsNextAttack] = useState(false);
@@ -308,13 +394,13 @@ export default function Home() {
               </div>
             </div>
             <div className="px-4 text-xl mt-10 flex flex-row justify-center items-center" >
-              <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => {setAutoPlay(false); startStory()}}>
+              <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { setAutoPlay(false); startStory() }}>
                 <div style={{ width: "6vh", height: "2vh", border: "0.1vh solid white", borderRadius: "10vh", }}></div>
-                <div className="font-extrabold px-4 text-sm">START</div>
+                <div className="font-extrabold px-4 text-sm">PLAY</div>
               </div>
-              <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() =>{setAutoPlay(true); startStory()}}>
+              <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { setAutoPlay(true); startStory() }}>
                 <div style={{ width: "6vh", height: "2vh", border: "0.1vh solid white", borderRadius: "10vh", }}></div>
-                <div className="font-extrabold px-4 text-sm">AUTO</div>
+                <div className="font-extrabold px-4 text-sm">AUTOPLAY</div>
 
               </div>
             </div>
